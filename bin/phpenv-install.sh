@@ -24,6 +24,8 @@
 set -e
 
 RBENV_REPO="https://github.com/sstephenson/rbenv.git"
+PHP_BLD_REPO="https://github.com/php-build/php-build.git"
+PHP_CFG_REPO="https://src.run/multi-env/php-config.git"
 
 phpenv_script() {
     local root="$1"
@@ -58,6 +60,32 @@ clone_rbenv() {
     git clone "$RBENV_REPO" "$install_location" > /dev/null
 }
 
+get_plugin() {
+    local git_remote="$1"
+    local install_path="$2/plugins/"
+    local working_path=$(pwd)
+
+    if [ ! -d "$install_path" ]; then
+        mkdir -p "$install_path"
+    fi
+
+    cd "$install_path"
+
+    git clone "$git_remote"
+
+    cd "$working_dir"
+}
+
+add_plugin_phpbld() {
+    local install_location="$1"
+    get_plugin "$PHP_BLD_REPO" "$install_location"
+}
+
+add_plugin_phpcfg() {
+    local install_location="$1"
+    get_plugin "$PHP_CFG_REPO" "$install_location"
+}
+
 if [ -z "$PHPENV_ROOT" ]; then
     PHPENV_ROOT="$HOME/.phpenv"
 fi
@@ -81,6 +109,8 @@ else
         sed -i -e 's/\(^\|[^/]\)rbenv/\1phpenv/g' "$PHPENV_ROOT"/libexec/rbenv-init
         sed -i -e 's/\phpenv-commands/rbenv-commands/g' "$PHPENV_ROOT"/libexec/rbenv-init
         sed -i -e 's/\Ruby/PHP/g' "$PHPENV_ROOT"/libexec/rbenv-which
+        add_plugin_phpbld "$PHPENV_ROOT"
+        add_plugin_phpcfg "$PHPENV_ROOT"
     fi
 fi
 
