@@ -1,33 +1,82 @@
 #!/usr/bin/env bash
-# The MIT License
+
+##
+# This file is part of the `phpenv` package.
 #
 # Copyright (c) 2011 Christoph Hochstrasser
+# Copyright (c) 2016 Rob Frawley <rmf@src.run>
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+# For the full copyright and license information, view the LICENSE.md
+# file distributed with this source code.
+##
 
-set -e
+SCRIPT_REAL_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}" 2> /dev/null)" && pwd)"
+REMOTE_RB_ENV="https://github.com/sstephenson/rbenv.git"
+REMOTE_PHP_BLD="https://src.run/multi-env/php-build.git"
+REMOTE_PHP_CFG="https://src.run/multi-env/php-config.git"
 
-RBENV_REPO="https://github.com/sstephenson/rbenv.git"
-PHP_BLD_REPO="https://github.com/php-build/php-build.git"
-PHP_CFG_REPO="https://src.run/multi-env/php-config.git"
+source "$SCRIPT_REAL_PATH/../lib/bright/bright.bash"
 
-phpenv_script() {
+out_prefix()
+{
+    bright_out_builder "$(basename $0)" "color:brown"
+    echo -n " "
+}
+
+out_line()
+{
+    out_prefix
+    echo $1
+}
+
+out_title()
+{
+    out_prefix
+    bright_out_builder " $1 " "control:style bold" "control:style reverse"
+    echo
+}
+
+out_instruction()
+{
+    out_prefix
+    bright_out_builder ">   $1" "color:magenta" "control:style bold"
+    echo
+}
+
+out_state_start()
+{
+    out_prefix
+    echo -n "${1:-starting operation} ... "
+}
+
+out_state_done_success()
+{
+    bright_out_builder " ${1:-okay} " "color:white" "color_bg:green" "control:style bold"
+    echo
+}
+
+out_state_done_error()
+{
+    bright_out_builder " ${1:-fail} " "color:white" "color_bg:red"
+    echo
+}
+
+out_state_done_okay()
+{
+    bright_out_builder "${1:-done}" "color:green" "control:style bold"
+    echo
+}
+
+out_state_done()
+{
+    case "$1" in
+        0 ) out_state_done_okay ;;
+        * ) out_state_done_error ;;
+    esac
+}
+
+phpenv_script()
+{
     local root="$1"
 
     cat <<SH
@@ -38,89 +87,112 @@ exec "\$RBENV_ROOT/libexec/rbenv" "\$@"
 SH
 }
 
-create_phpenv_bin() {
-    local install_location="$1"
+create_phpenv_bin()
+{
+    local install_path="$1"
 
-    phpenv_script "$install_location" > "$install_location/bin/phpenv"
-    chmod +x "$install_location/bin/phpenv"
+    phpenv_script "$install_path" > "$install_path/bin/phpenv"
+    chmod +x "$install_path/bin/phpenv"
 }
 
-update_phpenv() {
-    local install_location="$1"
-    local cwd=$(pwd)
-    cd "$install_location"
-
-    git pull origin master &> /dev/null
-
-    cd "$cwd"
-}
-
-clone_rbenv() {
-    local install_location="$1"
-    git clone "$RBENV_REPO" "$install_location" > /dev/null
-}
-
-get_plugin() {
-    local git_remote="$1"
-    local install_path="$2/plugins/"
+update_phpenv()
+{
+    local install_path="$1"
     local working_path=$(pwd)
 
-    if [ ! -d "$install_path" ]; then
-        mkdir -p "$install_path"
-    fi
-
+    out_state_start "Updating rbenv $REMOTE_RB_ENV"
     cd "$install_path"
-
-    git clone "$git_remote"
-
-    cd "$working_dir"
+    git pull origin master > /dev/null 2>&1
+    out_state_done $?
+    cd "$working_path"
 }
 
-add_plugin_phpbld() {
-    local install_location="$1"
-    get_plugin "$PHP_BLD_REPO" "$install_location"
+update_plugin()
+{
+    local remote="$2"
+    local plugin="$3"
+    local install_path="$1/plugins/$plugin"
+    local working_path=$(pwd)
+
+    out_state_start "Updating plugin $remote"
+    cd "$install_path"
+    git pull origin master > /dev/null 2>&1
+    out_state_done $?
+    cd "$working_path"
 }
 
-add_plugin_phpcfg() {
-    local install_location="$1"
-    get_plugin "$PHP_CFG_REPO" "$install_location"
+get_phpenv()
+{
+    local install_path="$1"
+
+    out_state_start "Cloning rbenv $REMOTE_RB_ENV"
+    git clone "$REMOTE_RB_ENV" "$install_path" > /dev/null 2>&1
+    out_state_done $?
 }
 
-if [ -z "$PHPENV_ROOT" ]; then
-    PHPENV_ROOT="$HOME/.phpenv"
-fi
+get_plugin()
+{
+    local remote="$2"
+    local plugin="$3"
+    local install_path="$1/plugins/$plugin"
+    local working_path=$(pwd)
 
-if [ -z "$CHECKOUT" ]; then
-    CHECKOUT=yes
-fi
+    out_state_start "Cloning plugin $plugin $remote"
+    git clone "$remote" "$install_path" > /dev/null 2>&1
+    out_state_done $?
+    cd "$working_path"
+}
 
-if [ "$UPDATE" = "yes" ]; then
-    echo "Updating phpenv in $PHPENV_ROOT"
-    update_phpenv "$PHPENV_ROOT"
-else
-    echo "Installing phpenv in $PHPENV_ROOT"
-    if [ "$CHECKOUT" = "yes" ]; then
-        clone_rbenv "$PHPENV_ROOT"
-        sed -i -e 's/rbenv/phpenv/g' "$PHPENV_ROOT"/completions/rbenv.{bash,zsh}
-        sed -i -s 's/\.rbenv-version/.phpenv-version/g' "$PHPENV_ROOT"/libexec/rbenv-local
-        sed -i -s 's/\.rbenv-version/.phpenv-version/g' "$PHPENV_ROOT"/libexec/rbenv-version-file
-        sed -i -s 's/\.ruby-version/.php-version/g' "$PHPENV_ROOT"/libexec/rbenv-local
-        sed -i -s 's/\.ruby-version/.php-version/g' "$PHPENV_ROOT"/libexec/rbenv-version-file
-        sed -i -e 's/\(^\|[^/]\)rbenv/\1phpenv/g' "$PHPENV_ROOT"/libexec/rbenv-init
-        sed -i -e 's/\phpenv-commands/rbenv-commands/g' "$PHPENV_ROOT"/libexec/rbenv-init
-        sed -i -e 's/\Ruby/PHP/g' "$PHPENV_ROOT"/libexec/rbenv-which
-        add_plugin_phpbld "$PHPENV_ROOT"
-        add_plugin_phpcfg "$PHPENV_ROOT"
+do_substitutions()
+{
+    local install_path="$1"
+
+    sed -i -e 's/rbenv/phpenv/g' "$install_path"/completions/rbenv.{bash,zsh}
+    sed -i -s 's/\.rbenv-version/.phpenv-version/g' "$install_path"/libexec/rbenv-local
+    sed -i -s 's/\.rbenv-version/.phpenv-version/g' "$install_path"/libexec/rbenv-version-file
+    sed -i -s 's/\.ruby-version/.php-version/g' "$install_path"/libexec/rbenv-local
+    sed -i -s 's/\.ruby-version/.php-version/g' "$install_path"/libexec/rbenv-version-file
+    sed -i -e 's/\(^\|[^/]\)rbenv/\1phpenv/g' "$install_path"/libexec/rbenv-init
+    sed -i -e 's/\phpenv-commands/rbenv-commands/g' "$install_path"/libexec/rbenv-init
+    sed -i -e 's/\Ruby/PHP/g' "$install_path"/libexec/rbenv-which
+}
+
+main()
+{
+    if [ -z "$PHPENV_ROOT" ]; then
+        PHPENV_ROOT="$HOME/.phpenv"
     fi
-fi
 
-create_phpenv_bin "$PHPENV_ROOT"
+    out_title "PHPENV Installer"
+    out_line "Using installation path $PHPENV_ROOT"
 
-echo "Success."
-echo
-echo "export PATH=\"${PHPENV_ROOT}/bin:"'$PATH"'
-echo 'eval "$(phpenv init -)"'
-echo
-echo "Add above line at the end of your ~/.bashrc \
-and restart your shell to use phpenv."
-echo
+    if [ -d $PHPENV_ROOT ]; then
+        update_phpenv "$PHPENV_ROOT"
+        update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
+        update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+    else
+        get_phpenv "$PHPENV_ROOT"
+        get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
+        get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+    fi
+
+    out_state_start "Performing string replacements"
+    do_substitutions  "$PHPENV_ROOT"
+    out_state_done $?
+
+    out_state_start "Creating phpenv binary file"
+    create_phpenv_bin "$PHPENV_ROOT"
+    out_state_done $?
+
+    out_instruction
+    out_instruction "# Add to $HOME/.bashrc to activate PHPENV"
+    out_instruction
+    out_instruction "export PATH=\"${PHPENV_ROOT}/bin:"'$PATH"'
+    out_instruction 'eval "$(phpenv init -)"'
+    out_instruction
+    out_line "Completed installation"
+}
+
+main
+
+# EOF
