@@ -10,61 +10,95 @@
 # file distributed with this source code.
 ##
 
-SCRIPT_REAL_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}" 2> /dev/null)" && pwd)"
+declare PHPENV_INST_RPATH="$(cd "$(dirname "${BASH_SOURCE[0]}" 2> /dev/null)" && pwd)"
+
+declare -A PHPENV_INST_DEPENDS=(
+    [bright-library]="$PHPENV_INST_RPATH/../lib/bright/bright.bash"
+)
+
+declare -A PHPENV_INST_REMOTES=(
+    [rbenv]="https://github.com/sstephenson/rbenv.git"
+    [php-build]="https://github.com/php-build/php-build.git"
+    [php-config]="https://src.run/multi-env/php-config.git"
+)
+
 REMOTE_RB_ENV="https://github.com/sstephenson/rbenv.git"
 REMOTE_PHP_BLD="https://github.com/php-build/php-build.git"
 REMOTE_PHP_CFG="https://src.run/multi-env/php-config.git"
 
-source "$SCRIPT_REAL_PATH/../lib/bright/bright.bash"
+out_nl()
+{
+    echo -en "\n"
+}
+
+out()
+{
+    echo -n "${1:-}"
+    [ "${2:-false}" == "true" ] && out_nl
+}
 
 out_prefix()
 {
-    bright_out_builder "$(basename $0)" "color:brown"
-    echo -n " "
+    [ -z $out_prefix_count ] && count=0
+    out_prefix_count=$((($out_prefix_count + 1)))
+
+    bright_out_builder "[$(basename $0):$(printf "%03d" $out_prefix_count)]" \
+        "color:black" "color_bg:white" "control:style reverse"
+    out " " false
 }
 
 out_line()
 {
     out_prefix
-    echo $1
+    bright_out_builder " --- " "color:magenta" "control:style bold"
+    out " $1" true
 }
 
 out_title()
 {
     out_prefix
-    bright_out_builder " $1 " "control:style bold" "control:style reverse"
-    echo
+    bright_out_builder " +++ " "control:style bold" "control:style reverse"
+    out " PHPENV INSTALLER AND UPDATER"
+    out_nl
 }
 
-out_instruction()
+out_error()
 {
-    out_prefix
-    bright_out_builder ">   $1" "color:magenta" "control:style bold"
-    echo
+        out_prefix
+        bright_out_builder " !!! " "color_bg:red"
+        bright_out_builder " $1" "color:red" "control:style bold"
+        out_nl
+}
+
+out_instructions()
+{
+    bright_out_builder "$1" "color:white" "control:style bold"
+    out_nl
 }
 
 out_state_start()
 {
     out_prefix
-    echo -n "${1:-starting operation} ... "
+    bright_out_builder " --- " "color:magenta" "control:style bold"
+    out " ${1:-starting operation} ... " false
 }
 
 out_state_done_success()
 {
     bright_out_builder " ${1:-okay} " "color:white" "color_bg:green" "control:style bold"
-    echo
+    out_nl
 }
 
 out_state_done_error()
 {
     bright_out_builder " ${1:-fail} " "color:white" "color_bg:red"
-    echo
+    out_nl
 }
 
 out_state_done_okay()
 {
     bright_out_builder "${1:-done}" "color:green" "control:style bold"
-    echo
+    out_nl
 }
 
 out_state_done()
@@ -73,6 +107,45 @@ out_state_done()
         0 ) out_state_done_okay ;;
         * ) out_state_done_error ;;
     esac
+}
+
+out_prompt()
+{
+    local question="$1"
+    local default="${2:-}"
+    local boolean="${3:-true}"
+    local input
+
+    while [ true ]; do
+        out_prefix
+        bright_out_builder " ??? " "color_bg:magenta" "control:style bold"
+        out " $1? [y/n]: " false
+
+        read input
+
+        if [ ! -n "$input" ]; then
+            input="$default"
+        fi
+
+        case "$input" in
+            y*|Y*) return 0 ;;
+            n*|N*) return 1 ;;
+        esac
+    done
+
+    out_nl
+}
+
+get_build_deps()
+{
+    sudo -p "Password to install build dependencies: " echo -n ""
+    out_state_start "Updating system package cache"
+    sudo apt-get update -qq
+    out_state_done $?
+
+    out_state_start "Resolving system build dependencies"
+    sudo apt-get build-dep -qq -y --force-yes php5
+    out_state_done $?
 }
 
 phpenv_script()
@@ -159,40 +232,79 @@ do_substitutions()
 
 main()
 {
+    local use_plugins=true
+    local get_osdeps=true
+
     if [ -z "$PHPENV_ROOT" ]; then
         PHPENV_ROOT="$HOME/.phpenv"
     fi
 
     out_title "PHPENV Installer"
-    out_line "Using installation path $PHPENV_ROOT"
+    out_line
+    out_line "Using path $PHPENV_INST_RPATH"
+
+    out_prompt "Use php-build and php-config plugins?" $use_plugins
+    if [ $? -eq 0 ]; then
+        use_plugins=true
+    else
+        use_plugins=false
+    fi
+
+    out_prompt "Install system build dependencies?" $get_osdeps
+    if [ $? -eq 0 ]; then
+        get_osdeps=true
+    else
+        get_osdeps=false
+    fi
 
     if [ -d $PHPENV_ROOT ]; then
         update_phpenv "$PHPENV_ROOT"
-        update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
-        update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+        if [ "$use_plugins" == "true" ]; then
+            update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
+            update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+        fi
     else
         get_phpenv "$PHPENV_ROOT"
-        get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
-        get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+        if [ "$use_plugins" == "true" ]; then
+            get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
+            get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+        fi
     fi
 
-    out_state_start "Performing string replacements"
+    out_state_start "Performing file content cleanup"
     do_substitutions  "$PHPENV_ROOT"
     out_state_done $?
 
-    out_state_start "Creating phpenv binary file"
+    out_state_start "Creating phpenv executable"
     create_phpenv_bin "$PHPENV_ROOT"
     out_state_done $?
 
-    out_instruction
-    out_instruction "# Add to $HOME/.bashrc to activate PHPENV"
-    out_instruction
-    out_instruction "export PATH=\"${PHPENV_ROOT}/bin:"'$PATH"'
-    out_instruction 'eval "$(phpenv init -)"'
-    out_instruction
-    out_line "Completed installation"
+    if [ "$get_osdeps" == "true" ]; then
+        get_build_deps
+    fi
+
+    out_instructions
+    out_instructions " # Add to $HOME/.bashrc to enable phpenv"
+    out_instructions
+    out_instructions " export PATH=\"${PHPENV_ROOT}/bin:"'$PATH"'
+    out_instructions ' eval "$(phpenv init -)"'
+    out_instructions
 }
 
-main
+deps()
+{
+    local working_path="$(pwd)"
+
+    cd "$PHPENV_INST_RPATH"
+    git submodule update --init > /dev/null 2>&1
+    cd "$working_path"
+
+    if ! [ -f  ]; then
+        echo "Required dependency does not exist: \"$PHPENV_INST_RPATH/../lib/bright/bright.bash\""
+        exit 1
+    fi
+}
+
+deps && source "$PHPENV_INST_RPATH/../lib/bright/bright.bash" && main
 
 # EOF
