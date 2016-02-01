@@ -12,7 +12,7 @@
 
 SCRIPT_REAL_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}" 2> /dev/null)" && pwd)"
 REMOTE_RB_ENV="https://github.com/sstephenson/rbenv.git"
-REMOTE_PHP_BLD="https://src.run/multi-env/php-build.git"
+REMOTE_PHP_BLD="https://github.com/php-build/php-build.git"
 REMOTE_PHP_CFG="https://src.run/multi-env/php-config.git"
 
 source "$SCRIPT_REAL_PATH/../lib/bright/bright.bash"
@@ -100,7 +100,7 @@ update_phpenv()
     local install_path="$1"
     local working_path=$(pwd)
 
-    out_state_start "Updating rbenv $REMOTE_RB_ENV"
+    out_state_start "Updating phpenv with $REMOTE_RB_ENV"
     cd "$install_path"
     git pull origin master > /dev/null 2>&1
     out_state_done $?
@@ -114,7 +114,7 @@ update_plugin()
     local install_path="$1/plugins/$plugin"
     local working_path=$(pwd)
 
-    out_state_start "Updating plugin $remote"
+    out_state_start "Updating plugin $plugin with $remote"
     cd "$install_path"
     git pull origin master > /dev/null 2>&1
     out_state_done $?
@@ -125,7 +125,7 @@ get_phpenv()
 {
     local install_path="$1"
 
-    out_state_start "Cloning rbenv $REMOTE_RB_ENV"
+    out_state_start "Cloning phpenv with $REMOTE_RB_ENV"
     git clone "$REMOTE_RB_ENV" "$install_path" > /dev/null 2>&1
     out_state_done $?
 }
@@ -137,7 +137,7 @@ get_plugin()
     local install_path="$1/plugins/$plugin"
     local working_path=$(pwd)
 
-    out_state_start "Cloning plugin $plugin $remote"
+    out_state_start "Cloning plugin $plugin with $remote"
     git clone "$remote" "$install_path" > /dev/null 2>&1
     out_state_done $?
     cd "$working_path"
