@@ -243,7 +243,7 @@ main()
     out_line
     out_line "Using path $PHPENV_INST_RPATH"
 
-    out_prompt "Use php-build and php-config plugins?" $use_plugins
+    out_prompt "Use php-build and php-config plug-ins (php-config temporarily unavailable)?" $use_plugins
     if [ $? -eq 0 ]; then
         use_plugins=true
     else
@@ -261,13 +261,13 @@ main()
         update_phpenv "$PHPENV_ROOT"
         if [ "$use_plugins" == "true" ]; then
             update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
-            update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+            #update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
         fi
     else
         get_phpenv "$PHPENV_ROOT"
         if [ "$use_plugins" == "true" ]; then
             get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
-            get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+            #get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
         fi
     fi
 
