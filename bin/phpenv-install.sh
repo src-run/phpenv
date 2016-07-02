@@ -19,12 +19,12 @@ declare -A PHPENV_INST_DEPENDS=(
 declare -A PHPENV_INST_REMOTES=(
     [rbenv]="https://github.com/sstephenson/rbenv.git"
     [php-build]="https://github.com/php-build/php-build.git"
-    [php-config]="https://src.run/multi-env/php-config.git"
+    [php-conf]="https://github.com/src-run/php-conf.git"
 )
 
 REMOTE_RB_ENV="https://github.com/sstephenson/rbenv.git"
 REMOTE_PHP_BLD="https://github.com/php-build/php-build.git"
-REMOTE_PHP_CFG="https://src.run/multi-env/php-config.git"
+REMOTE_PHP_CFG="https://github.com/src-run/php-conf.git"
 
 out_nl()
 {
@@ -116,12 +116,23 @@ out_prompt()
     local boolean="${3:-true}"
     local input
 
+    if [[ "$default" == "true" ]]; then default="y"; fi
+    if [[ "$default" == "false" ]]; then default="n"; fi
+
     while [ true ]; do
         out_prefix
         bright_out_builder " ??? " "color_bg:magenta" "control:style bold"
-        out " $1? [y/n]: " false
+        if [[ "$default" == "n" ]]; then
+            out " $1? [y/N]: " false
+        elif [[ "$default" == "y" ]]; then
+            out " $1? [Y/n]: " false
+        fi
 
-        read input
+        if [ -n "$NON_INTERACTIVE" ]; then
+            echo "(non-interactive $default)"
+        else
+            read input
+        fi
 
         if [ ! -n "$input" ]; then
             input="$default"
@@ -233,7 +244,7 @@ do_substitutions()
 main()
 {
     local use_plugins=true
-    local get_osdeps=true
+    local get_osdeps=false
 
     if [ -z "$PHPENV_ROOT" ]; then
         PHPENV_ROOT="$HOME/.phpenv"
@@ -243,14 +254,14 @@ main()
     out_line
     out_line "Using path $PHPENV_INST_RPATH"
 
-    out_prompt "Use php-build and php-config plug-ins (php-config temporarily unavailable)?" $use_plugins
+    out_prompt "Use php-build and php-conf plug-ins" $use_plugins
     if [ $? -eq 0 ]; then
         use_plugins=true
     else
         use_plugins=false
     fi
 
-    out_prompt "Install system build dependencies?" $get_osdeps
+    out_prompt "Install system build dependencies" $get_osdeps
     if [ $? -eq 0 ]; then
         get_osdeps=true
     else
@@ -261,13 +272,13 @@ main()
         update_phpenv "$PHPENV_ROOT"
         if [ "$use_plugins" == "true" ]; then
             update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
-            #update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+            update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-conf"
         fi
     else
         get_phpenv "$PHPENV_ROOT"
         if [ "$use_plugins" == "true" ]; then
             get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
-            #get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-config"
+            get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-conf"
         fi
     fi
 
@@ -299,12 +310,12 @@ deps()
     git submodule update --init > /dev/null 2>&1
     cd "$working_path"
 
-    if ! [ -f  ]; then
+    if ! [ -f "$PHPENV_INST_RPATH/../lib/bright/bright.bash" ]; then
         echo "Required dependency does not exist: \"$PHPENV_INST_RPATH/../lib/bright/bright.bash\""
         exit 1
     fi
 }
 
-deps && source "$PHPENV_INST_RPATH/../lib/bright/bright.bash" && main
+deps && source "$PHPENV_INST_RPATH/../lib/bright/bright.bash" && main $@
 
 # EOF
