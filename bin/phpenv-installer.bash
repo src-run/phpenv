@@ -131,14 +131,15 @@ out_prompt()
     while [ true ]; do
         out_prefix
         bright_out_builder " ??? " "color_bg:magenta" "control:style bold"
+
         if [[ "$default" == "n" ]]; then
             out " $1? [y/N]: " false
         elif [[ "$default" == "y" ]]; then
             out " $1? [Y/n]: " false
         fi
 
-        if [ -n "$NON_INTERACTIVE" ]; then
-            echo "(non-interactive $default)"
+        if [[ ! -t 0 ]] || [[ -n "${NON_INTERFACTIVE}" ]]; then
+            echo "(non-interactive ${default^^})"
         else
             read input
         fi
@@ -166,11 +167,11 @@ get_build_deps()
     out_state_done_result $?
 
     out_state_start "Resolving system build dependencies"
-    sudo ${apt_bin} build-dep -qqq -y --force-yes php7.1 || \
-        sudo ${apt_bin} build-dep -qqq -y --force-yes php7.0 || \
-        sudo ${apt_bin} build-dep -qqq -y --force-yes php7 || \
-        sudo ${apt_bin} build-dep -qqq -y --force-yes php5.6 || \
-        sudo ${apt_bin} build-dep -qqq -y --force-yes php5
+    sudo ${apt_bin} build-dep -qqq -y php7.1 || \
+        sudo ${apt_bin} build-dep -qqq -y php7.0 || \
+        sudo ${apt_bin} build-dep -qqq -y php7 || \
+        sudo ${apt_bin} build-dep -qqq -y php5.6 || \
+        sudo ${apt_bin} build-dep -qqq -y php5
     out_state_done_result $?
 }
 

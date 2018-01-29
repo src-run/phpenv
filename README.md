@@ -11,7 +11,7 @@ __Single Command Install:__ You can use this installer script without cloning th
 following command:
 
 ```bash
-curl -s https://raw.githubusercontent.com/src-run/phpenv/master/bin/phpenv-installer-remote.sh | bash
+curl -s https://raw.githubusercontent.com/src-run/phpenv/master/bin/phpenv-installer-remote.bash | bash
 ```
 
 __Clone Repository Yourself:__ Alternatively, you can clone the repository yourself and execute the installer script:
