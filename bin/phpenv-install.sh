@@ -166,17 +166,19 @@ phpenv_script()
     cat <<SH
 #!/usr/bin/env bash
 export PHPENV_ROOT=\${PHPENV_ROOT:-'$root'}
-export RBENV_ROOT="\$PHPENV_ROOT"
-exec "\$RBENV_ROOT/libexec/rbenv" "\$@"
+exec "\$PHPENV_ROOT/libexec/phpenv" "\$@"
 SH
 }
 
 create_phpenv_bin()
 {
     local install_path="$1"
+    local result=0
 
-    phpenv_script "$install_path" > "$install_path/bin/phpenv"
-    chmod +x "$install_path/bin/phpenv"
+    out_state_start "Creating phpenv executable"
+    phpenv_script "$install_path" > "$install_path/bin/phpenv" || result=1
+    chmod +x "$install_path/bin/phpenv" || result=1
+    out_state_done $result
 }
 
 update_phpenv()
@@ -230,15 +232,29 @@ get_plugin()
 do_substitutions()
 {
     local install_path="$1"
+    local working_path=$(pwd)
+    local result=0
 
-    sed -i -e 's/rbenv/phpenv/g' "$install_path"/completions/rbenv.{bash,zsh}
-    sed -i -s 's/\.rbenv-version/.phpenv-version/g' "$install_path"/libexec/rbenv-local
-    sed -i -s 's/\.rbenv-version/.phpenv-version/g' "$install_path"/libexec/rbenv-version-file
-    sed -i -s 's/\.ruby-version/.php-version/g' "$install_path"/libexec/rbenv-local
-    sed -i -s 's/\.ruby-version/.php-version/g' "$install_path"/libexec/rbenv-version-file
-    sed -i -e 's/\(^\|[^/]\)rbenv/\1phpenv/g' "$install_path"/libexec/rbenv-init
-    sed -i -e 's/\phpenv-commands/rbenv-commands/g' "$install_path"/libexec/rbenv-init
-    sed -i -e 's/\Ruby/PHP/g' "$install_path"/libexec/rbenv-which
+    out_state_start "Performing ruby->php file substitutions"
+    sed -i -e 's/rbenv/phpenv/g' "$install_path"/completions/* || result=1
+    sed -i -e 's/\(^\|[^/]\)rbenv/\1phpenv/g' "$install_path"/libexec/* || result=1
+    sed -i -s 's/\.ruby-version/.php-version/g' "$install_path"/libexec/* || result=1
+    sed -i -e 's/rbenv/phpenv/g' "$install_path"/libexec/* || result=1
+    sed -i -e 's/RBENV/PHPENV/g' "$install_path"/libexec/* || result=1
+    sed -i -s 's/Ruby/PHP/g' "$install_path"/libexec/* || result=1
+    sed -i -s 's/RUBY/PHP/g' "$install_path"/libexec/* || result=1
+    sed -i -s 's/ruby/php/g' "$install_path"/libexec/* || result=1
+    out_state_done $result
+
+    result=0
+    out_state_start "Renaming internal executables"
+    cd "${PHPENV_ROOT}" || result=1
+    for f in `ls ${PHPENV_ROOT}/libexec/`; do
+        mv "${PHPENV_ROOT}/libexec/$f" "${PHPENV_ROOT}/libexec/phpenv${f:5}" || result=1
+    done
+    out_state_done $result
+
+    cd "$working_path"
 }
 
 main()
@@ -282,13 +298,8 @@ main()
         fi
     fi
 
-    out_state_start "Performing file content cleanup"
     do_substitutions  "$PHPENV_ROOT"
-    out_state_done $?
-
-    out_state_start "Creating phpenv executable"
     create_phpenv_bin "$PHPENV_ROOT"
-    out_state_done $?
 
     if [ "$get_osdeps" == "true" ]; then
         get_build_deps
