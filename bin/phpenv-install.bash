@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 
 ##
-# This file is part of the `phpenv` package.
+# This file is part of the `src-run/phpenv` package.
 #
-# Copyright (c) 2011 Christoph Hochstrasser
-# Copyright (c) 2016 Rob Frawley <rmf@src.run>
+# Copyright (c) 2016-2018 Rob Frawley <rmf@src.run>
 #
 # For the full copyright and license information, view the LICENSE.md
 # file distributed with this source code.
 ##
 
-declare PHPENV_INST_RPATH="$(cd "$(dirname "${BASH_SOURCE[0]}" 2> /dev/null)" && pwd)"
+declare PHPENV_INSTALLER_REALPATH="$(cd "$(dirname "${BASH_SOURCE[0]}" 2> /dev/null)" && pwd)"
 
 declare -A PHPENV_INST_DEPENDS=(
-    [bright-library]="$PHPENV_INST_RPATH/../lib/bright/bright.bash"
+    [bright-library]="$PHPENV_INSTALLER_REALPATH/../lib/bright/bright.bash"
 )
 
 declare -A PHPENV_INST_REMOTES=(
@@ -22,9 +21,9 @@ declare -A PHPENV_INST_REMOTES=(
     [php-conf]="https://github.com/src-run/php-conf.git"
 )
 
-REMOTE_RB_ENV="https://github.com/sstephenson/rbenv.git"
-REMOTE_PHP_BLD="https://github.com/php-build/php-build.git"
-REMOTE_PHP_CFG="https://github.com/src-run/php-conf.git"
+readonly PHPENV_REMOTE_RBENV="https://github.com/sstephenson/rbenv.git"
+readonly PHPENV_REMOTE_PHPBLD="https://github.com/php-build/php-build.git"
+readonly PHPENV_REMOTE_PHPCFG="https://github.com/src-run/php-conf.git"
 
 out_nl()
 {
@@ -186,7 +185,7 @@ update_phpenv()
     local install_path="$1"
     local working_path=$(pwd)
 
-    out_state_start "Updating phpenv with $REMOTE_RB_ENV"
+    out_state_start "Updating phpenv with $PHPENV_REMOTE_RBENV"
     cd "$install_path"
     git pull origin master > /dev/null 2>&1
     out_state_done $?
@@ -211,8 +210,8 @@ get_phpenv()
 {
     local install_path="$1"
 
-    out_state_start "Cloning phpenv with $REMOTE_RB_ENV"
-    git clone "$REMOTE_RB_ENV" "$install_path" > /dev/null 2>&1
+    out_state_start "Cloning phpenv with $PHPENV_REMOTE_RBENV"
+    git clone "$PHPENV_REMOTE_RBENV" "$install_path" > /dev/null 2>&1
     out_state_done $?
 }
 
@@ -268,7 +267,7 @@ main()
 
     out_title "PHPENV Installer"
     out_line
-    out_line "Using path $PHPENV_INST_RPATH"
+    out_line "Using path $PHPENV_INSTALLER_REALPATH"
 
     out_prompt "Use php-build and php-conf plug-ins" $use_plugins
     if [ $? -eq 0 ]; then
@@ -287,14 +286,14 @@ main()
     if [ -d $PHPENV_ROOT ]; then
         update_phpenv "$PHPENV_ROOT"
         if [ "$use_plugins" == "true" ]; then
-            update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
-            update_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-conf"
+            update_plugin "$PHPENV_ROOT" "$PHPENV_REMOTE_PHPBLD" "php-build"
+            update_plugin "$PHPENV_ROOT" "$PHPENV_REMOTE_PHPCFG" "php-conf"
         fi
     else
         get_phpenv "$PHPENV_ROOT"
         if [ "$use_plugins" == "true" ]; then
-            get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_BLD" "php-build"
-            get_plugin "$PHPENV_ROOT" "$REMOTE_PHP_CFG" "php-conf"
+            get_plugin "$PHPENV_ROOT" "$PHPENV_REMOTE_PHPBLD" "php-build"
+            get_plugin "$PHPENV_ROOT" "$PHPENV_REMOTE_PHPCFG" "php-conf"
         fi
     fi
 
@@ -317,16 +316,14 @@ deps()
 {
     local working_path="$(pwd)"
 
-    cd "$PHPENV_INST_RPATH"
+    cd "$PHPENV_INSTALLER_REALPATH"
     git submodule update --init > /dev/null 2>&1
     cd "$working_path"
 
-    if ! [ -f "$PHPENV_INST_RPATH/../lib/bright/bright.bash" ]; then
-        echo "Required dependency does not exist: \"$PHPENV_INST_RPATH/../lib/bright/bright.bash\""
+    if ! [ -f "$PHPENV_INSTALLER_REALPATH/../lib/bright/bright.bash" ]; then
+        echo "Required dependency does not exist: \"$PHPENV_INSTALLER_REALPATH/../lib/bright/bright.bash\""
         exit 1
     fi
 }
 
-deps && source "$PHPENV_INST_RPATH/../lib/bright/bright.bash" && main $@
-
-# EOF
+deps && source "$PHPENV_INSTALLER_REALPATH/../lib/bright/bright.bash" && main $@
