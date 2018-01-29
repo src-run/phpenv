@@ -17,7 +17,7 @@ curl -s https://raw.githubusercontent.com/src-run/phpenv/master/bin/phpenv-insta
 __Clone Repository Yourself:__ Alternatively, you can clone the repository yourself and execute the installer script:
 
 ```bash
-git clone https://github.com/src-run/phpenv.git
+git clone --recurse-submodules https://github.com/src-run/phpenv.git
 bash phpenv/bin/phpenv-installer.bash
 ```
 
