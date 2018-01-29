@@ -1,6 +1,7 @@
 # The MIT License
 
 *Copyright (c) 2016-2018 Rob Frawley 2nd <rmf@src.run>*
+
 *Copyright (c) 2011-2012 Christoph Hochstrasser <christoph@hochstrasser.io>*
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
