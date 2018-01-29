@@ -15,15 +15,9 @@ declare -A PHPENV_INST_DEPENDS=(
     [bright-library]="$PHPENV_INSTALLER_REALPATH/../lib/bright/bright.bash"
 )
 
-declare -A PHPENV_INST_REMOTES=(
-    [rbenv]="https://github.com/sstephenson/rbenv.git"
-    [php-build]="https://github.com/php-build/php-build.git"
-    [php-conf]="https://github.com/src-run/php-conf.git"
-)
-
 readonly PHPENV_REMOTE_RBENV="https://github.com/sstephenson/rbenv.git"
 readonly PHPENV_REMOTE_PHPBLD="https://github.com/php-build/php-build.git"
-readonly PHPENV_REMOTE_PHPCFG="https://github.com/src-run/php-conf.git"
+readonly PHPENV_REMOTE_PHPCFG="https://github.com/src-run/phpenv-conf.git"
 
 out_nl()
 {
