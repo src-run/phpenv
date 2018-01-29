@@ -42,7 +42,7 @@ temporary_path()
 main()
 {
     local temporary_path="$(temporary_path)"
-    local installer_file="/bin/phpenv-install.bash"
+    local installer_file="/bin/phpenv-installer.bash"
 
     mkdir -p "${temporary_path}" || \
         out_error "Unable to create temporary work path ${temporary_path} "\

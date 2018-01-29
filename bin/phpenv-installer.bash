@@ -100,12 +100,22 @@ out_state_done_okay()
     out_nl
 }
 
-out_state_done()
+out_state_done_result()
 {
     case "$1" in
         0 ) out_state_done_okay ;;
         * ) out_state_done_error ;;
     esac
+}
+
+out_state_done_required()
+{
+    out_state_done_result $1
+
+    if [[ $1 -ne 0 ]]; then
+        echo "Encountered unrecoverable error!"
+        exit 255
+    fi
 }
 
 out_prompt()
@@ -148,14 +158,20 @@ out_prompt()
 
 get_build_deps()
 {
+    local apt_bin=$(which apt)
+
     sudo -p "Password to install build dependencies: " echo -n ""
     out_state_start "Updating system package cache"
-    sudo apt-get update -qq
-    out_state_done $?
+    sudo ${apt_bin} update -qqq
+    out_state_done_result $?
 
     out_state_start "Resolving system build dependencies"
-    sudo apt-get build-dep -qq -y --force-yes php5
-    out_state_done $?
+    sudo ${apt_bin} build-dep -qqq -y --force-yes php7.1 || \
+        sudo ${apt_bin} build-dep -qqq -y --force-yes php7.0 || \
+        sudo ${apt_bin} build-dep -qqq -y --force-yes php7 || \
+        sudo ${apt_bin} build-dep -qqq -y --force-yes php5.6 || \
+        sudo ${apt_bin} build-dep -qqq -y --force-yes php5
+    out_state_done_result $?
 }
 
 phpenv_script()
@@ -177,7 +193,7 @@ create_phpenv_bin()
     out_state_start "Creating phpenv executable"
     phpenv_script "$install_path" > "$install_path/bin/phpenv" || result=1
     chmod +x "$install_path/bin/phpenv" || result=1
-    out_state_done $result
+    out_state_done_required $result
 }
 
 update_phpenv()
@@ -188,7 +204,7 @@ update_phpenv()
     out_state_start "Updating phpenv with $PHPENV_REMOTE_RBENV"
     cd "$install_path"
     git pull origin master > /dev/null 2>&1
-    out_state_done $?
+    out_state_done_result $?
     cd "$working_path"
 }
 
@@ -202,7 +218,7 @@ update_plugin()
     out_state_start "Updating plugin $plugin with $remote"
     cd "$install_path"
     git pull origin master > /dev/null 2>&1
-    out_state_done $?
+    out_state_done_result $?
     cd "$working_path"
 }
 
@@ -212,7 +228,7 @@ get_phpenv()
 
     out_state_start "Cloning phpenv with $PHPENV_REMOTE_RBENV"
     git clone "$PHPENV_REMOTE_RBENV" "$install_path" > /dev/null 2>&1
-    out_state_done $?
+    out_state_done_required $?
 }
 
 get_plugin()
@@ -224,7 +240,7 @@ get_plugin()
 
     out_state_start "Cloning plugin $plugin with $remote"
     git clone "$remote" "$install_path" > /dev/null 2>&1
-    out_state_done $?
+    out_state_done_result $?
     cd "$working_path"
 }
 
@@ -243,7 +259,7 @@ do_substitutions()
     sed -i -s 's/Ruby/PHP/g' "$install_path"/libexec/* || result=1
     sed -i -s 's/RUBY/PHP/g' "$install_path"/libexec/* || result=1
     sed -i -s 's/ruby/php/g' "$install_path"/libexec/* || result=1
-    out_state_done $result
+    out_state_done_required $result
 
     result=0
     out_state_start "Renaming internal executables"
@@ -251,7 +267,7 @@ do_substitutions()
     for f in `ls ${PHPENV_ROOT}/libexec/`; do
         mv "${PHPENV_ROOT}/libexec/$f" "${PHPENV_ROOT}/libexec/phpenv${f:5}" || result=1
     done
-    out_state_done $result
+    out_state_done_required $result
 
     cd "$working_path"
 }
